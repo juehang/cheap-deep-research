@@ -1,1 +1,1 @@
-# cheap-deep-research
+# cheap-research
