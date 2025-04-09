@@ -7,7 +7,7 @@ from smolagents import (
 )
 
 from .config import ConfigManager
-from .tools import create_file
+from .tools import create_file, list_files, read_file
 
 def main():
     """
@@ -36,6 +36,11 @@ def main():
         model_id=config_manager.config["web_page"]["model"],
         api_key=config_manager.config["web_page"]["api_key"],
         )
+    
+    writing_model = LiteLLMModel(
+        model_id=config_manager.config["writing"]["model"],
+        api_key=config_manager.config["writing"]["api_key"] or config_manager.config["orchestrator"]["api_key"],
+        )
 
     # Initialize tools
     web_search_agent = ToolCallingAgent(
@@ -60,6 +65,18 @@ def main():
             ),
     )
     
+    # Create the writing agent with file management capabilities
+    writing_agent = ToolCallingAgent(
+        tools=[list_files, create_file, read_file],
+        model=writing_model,
+        max_steps=15,  # More steps for complex writing tasks
+        name="writing_agent",
+        description=(
+            "Creates, reads, and edits text content. Can work with multiple "
+            "files to summarize information, reformat content, or create original writings."
+            ),
+    )
+    
     web_search_agent.prompt_templates["system_prompt"] = (
         web_search_agent.prompt_templates["system_prompt"]
         + "\n"
@@ -72,13 +89,20 @@ def main():
         + config_manager.config["web_page"]["additional_system_prompt"]
     )
     
-    manager_agent = CodeAgent(
-        tools=[],
-        model=orchestrator_model,
-        managed_agents=[web_search_agent, web_page_agent],
-        additional_authorized_imports=["time", "numpy", "pandas", "matplotlib"],
+    writing_agent.prompt_templates["system_prompt"] = (
+        writing_agent.prompt_templates["system_prompt"]
+        + "\n"
+        + config_manager.config["writing"]["additional_system_prompt"]
     )
     
+    # Add list_files tool to the orchestrator agent and connect all managed agents
+    manager_agent = CodeAgent(
+        tools=[list_files],  # Add list_files tool to orchestrator
+        model=orchestrator_model,
+        managed_agents=[web_search_agent, web_page_agent, writing_agent],
+        additional_authorized_imports=["time", "numpy", "pandas", "matplotlib"],
+    )
+
     manager_agent.prompt_templates["system_prompt"] = (
         manager_agent.prompt_templates["system_prompt"]
         + "\n"
@@ -95,6 +119,7 @@ def main():
     # Welcome message
     print("Research assistant is ready. Type 'exit' to quit.")
     print(f"Webpage content can be saved to files in the '{default_save_dir}' directory.")
+    print("The system includes a specialized writing agent that can help create and manage content.")
     
     # Simple interactive loop
     while True:

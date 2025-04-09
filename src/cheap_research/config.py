@@ -28,8 +28,17 @@ DEFAULTS = {
             "The workflow should be as such: \n"
             " 1. Gather relevant information. Prefer academic sources.\n"
             " 2. Use the web_page_agent to visit the web pages and save the "
-            "content to files.\n"
+            "content to files. Make sure to check the files using the "
+            "list_files tool.\n"
             " 3. If there is insufficient information, repeat steps 1 and 2.\n"
+            " 4. Plan the structure of the report and the content of each "
+            "section.\n"
+            " 5. Use the writing_agent to create a .bib file with all the "
+            "citations.\n"
+            " 6. Use the writing_agent to write each section or slide "
+            "in a separate tex file. "
+            "Make sure to check the files using the list_files tool.\n"
+            " 7. Combine all the sections into a single tex file."
         ),
     },
     "web_search": {
@@ -57,10 +66,36 @@ DEFAULTS = {
             "Include the filename in your response.\n"
         ),
     },
+    "writing": {
+        "model": "openrouter/mistralai/mistral-small-24b-instruct-2501",
+        "api_key": "",
+        "additional_system_prompt": (
+            "As a specialized writing assistant, you can read files, list "
+            "available files, and create new files with content.\n"
+            "When writing content, follow these guidelines:\n"
+            "- Use clear, concise language appropriate for the requested "
+            "content type\n"
+            "- Properly attribute any sources used in your writing\n"
+            "- Format content appropriately based on the file type and "
+            "purpose\n"
+            "- For markdown files, use proper markdown syntax for headings, "
+            "lists, etc.\n"
+            "- Always save files with appropriate extensions "
+            "(.md, .tex, .bib, etc.)\n"
+            "- Note that you will be asked to write partial LaTeX documents, "
+            "so do not include the \\documentclass or \\begin{document} "
+            "commands in your responses Unless requested to do so.\n"
+        ),
+    },
     "file_saving": {
         "enabled": True,
         "default_directory": "saved_pages"  # Relative to working directory
     },
+    "file_listing": {
+        "enabled": True,
+        "show_file_sizes": True,
+        "show_modification_times": True
+    }
 }
 
 
