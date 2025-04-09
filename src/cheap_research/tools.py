@@ -8,6 +8,118 @@ from smolagents import tool
 
 from .config import ConfigManager
 
+@tool
+def compile_latex_document(tex_file_path: str) -> str:
+    """
+    Compiles a LaTeX document using latexmk with the LuaLaTeX engine.
+    This automatically handles multiple compilation passes for references, TOC, etc.
+    
+    Args:
+        tex_file_path: Path to the LaTeX document to compile.
+    
+    Returns:
+        A message indicating the result of the compilation.
+    """
+    import os
+    import subprocess
+    
+    # Get current working directory as absolute path
+    cwd = os.path.abspath(os.getcwd())
+    
+    # Normalize the path and make it absolute
+    file_path = os.path.abspath(os.path.normpath(tex_file_path))
+    
+    # Security check: ensure the path is within the current working directory
+    if not file_path.startswith(cwd):
+        return f"Error: Cannot compile files outside the current working directory. Path: {tex_file_path}"
+    
+    # Check if file exists
+    if not os.path.exists(file_path):
+        return f"Error: File does not exist: {tex_file_path}"
+    
+    # Check if path is a .tex file
+    if not file_path.endswith('.tex'):
+        return f"Error: '{tex_file_path}' is not a LaTeX (.tex) file."
+    
+    # Get directory and filename
+    file_dir = os.path.dirname(file_path)
+    filename = os.path.basename(file_path)
+    
+    # Check if latexmk is installed
+    try:
+        result = subprocess.run(['latexmk', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode != 0:
+            return "Error: latexmk is not installed or not available in the system PATH."
+    except FileNotFoundError:
+        return "Error: latexmk is not installed or not available in the system PATH."
+    
+    try:
+        # Run latexmk with lualatex engine
+        result = subprocess.run(
+            ['latexmk', '-lualatex', '-interaction=nonstopmode', filename],
+            cwd=file_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        # Get output filename (change extension from .tex to .pdf)
+        pdf_name = os.path.splitext(filename)[0] + '.pdf'
+        pdf_path = os.path.join(file_dir, pdf_name)
+        
+        # Check if compilation was successful
+        if result.returncode != 0 or not os.path.exists(pdf_path):
+            # Extract error message from output
+            error_lines = [line for line in result.stdout.split('\n') if 'error' in line.lower()]
+            error_message = '\n'.join(error_lines) if error_lines else 'Unknown compilation error'
+            return f"LaTeX compilation failed: {error_message}"
+        
+        # Get relative path for display
+        rel_path = os.path.relpath(pdf_path, cwd)
+        
+        return f"LaTeX document successfully compiled: {rel_path}"
+        
+    except Exception as e:
+        return f"Error during LaTeX compilation: {str(e)}"
+
+@tool
+def extract_pdf_text(url: str) -> str:
+    """
+    Fetches a PDF from the given URL and extracts its text content.
+    Does not save the PDF file locally.
+    
+    Args:
+        url: The URL of the PDF to process
+        
+    Returns:
+        The extracted text content from the PDF
+    """
+    try:
+        import requests
+        import pymupdf
+        import pymupdf4llm
+    except ImportError:
+        return "Error: Required packages not installed. Please install pymupdf and requests."
+    
+    try:
+        # Fetch the PDF content
+        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0 ..."})
+        response.raise_for_status()
+        
+        # Process the PDF content directly
+        pdf_document = pymupdf.Document(stream=response.content)
+        markdown_content = pymupdf4llm.to_markdown(pdf_document)
+        markdown_content = markdown_content.encode("ascii", "xmlcharrefreplace")
+        max_output_length = 100000
+        if len(markdown_content) > max_output_length:
+            markdown_content = markdown_content[:max_output_length] + "\n\n[Content truncated due to length...]"
+        
+        
+        return f"PDF Source: {url}\n\n" + markdown_content
+    except requests.exceptions.RequestException as e:
+        return f"Error fetching PDF: {str(e)}"
+    except Exception as e:
+        return f"Error processing PDF: {str(e)}"
 
 @tool
 def visit_webpage(url: str) -> str:
@@ -51,7 +163,7 @@ def visit_webpage(url: str) -> str:
         markdown_content = f"Source: {url}\n\n{markdown_content}"
         
         # Truncate content if it's too long (40,000 characters as in reference implementation)
-        max_output_length = 40000
+        max_output_length = 100000
         if len(markdown_content) > max_output_length:
             markdown_content = markdown_content[:max_output_length] + "\n\n[Content truncated due to length...]"
 
@@ -306,7 +418,7 @@ def create_latex_document(
     institute: Optional[str] = None
 ) -> str:
     """
-    Creates a LaTeX document using a Jinja2 template and includes sections using \input statements.
+    Creates a LaTeX document using a Jinja2 template and includes sections using \\input statements.
     
     Args:
         template_type: The type of template to use (e.g., "article", "beamer").

@@ -11,9 +11,9 @@
 \usepackage{natbib}
 
 % Document settings
-\title{{{ title|default("Document Title") }}}
-\author{{{ author|default("Author Name") }}}
-\date{{{ date|default("\\today") }}}
+\title{ {{ title|default("Document Title") }} }
+\author{ {{ author|default("Author Name") }} }
+\date{ {{ date|default("\\today") }} }
 
 \begin{document}
 
@@ -21,12 +21,12 @@
 
 {% if abstract %}
 \begin{abstract}
-\input{{{ abstract }}}
+\input{ {{ abstract }} }
 \end{abstract}
 {% endif %}
 
 {% for section in sections %}
-\input{{{ section }}}
+\input{ {{ section }} }
 {% endfor %}
 
 \bibliographystyle{plainnat}

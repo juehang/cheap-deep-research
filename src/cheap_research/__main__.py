@@ -8,7 +8,7 @@ from smolagents import (
 from .config import ConfigManager
 from .tools import (
     create_file, list_files, read_file, list_latex_templates, 
-    create_latex_document, visit_webpage
+    create_latex_document, compile_latex_document, visit_webpage, extract_pdf_text,
 )
 
 def main():
@@ -57,7 +57,7 @@ def main():
     
     # Add file saving capability to web page agent with our custom webpage tool
     web_page_agent = ToolCallingAgent(
-        tools=[visit_webpage, create_file],
+        tools=[visit_webpage, extract_pdf_text, create_file],
         model=web_page_model,
         max_steps=10,
         name="web_page_agent",
@@ -74,8 +74,9 @@ def main():
         max_steps=15,  # More steps for complex writing tasks
         name="writing_agent",
         description=(
-            "Creates, reads, and edits text content. Can work with multiple "
-            "files to summarize information, reformat content, or create original writings."
+            "Creates, reads, and edits text content. Can work files to "
+            "summarize information, reformat content, or create original "
+            "writings."
             ),
     )
     
@@ -100,13 +101,15 @@ def main():
     # Add LaTeX tools and file management tools to the orchestrator
     manager_agent = CodeAgent(
         tools=[
-            list_files, list_latex_templates, read_file, create_latex_document
+            list_files, list_latex_templates, read_file, create_latex_document,
+            compile_latex_document,
             ],
         model=orchestrator_model,
         managed_agents=[web_search_agent, web_page_agent, writing_agent],
         additional_authorized_imports=[
             "time", "numpy", "pandas", "matplotlib",
         ],
+        planning_interval=6,
     )
 
     manager_agent.prompt_templates["system_prompt"] = (
@@ -129,13 +132,13 @@ def main():
     if not os.path.exists(latex_output_dir):
         os.makedirs(latex_output_dir, exist_ok=True)
         print(f"Created LaTeX output directory: {latex_output_dir}")
-    
+
     # Welcome message
     print("Research assistant is ready. Type 'exit' to quit.")
     print(f"Webpage content can be saved to files in the '{default_save_dir}' directory.")
     print(f"LaTeX documents will be generated in the '{latex_output_dir}' directory.")
     print("Available LaTeX templates: " + ", ".join(config_manager.config["latex"]["available_templates"]))
-    
+
     # Simple interactive loop
     while True:
         try:

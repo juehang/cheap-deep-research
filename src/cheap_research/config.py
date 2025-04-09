@@ -32,9 +32,8 @@ DEFAULTS = {
             " 2. Use the web_page_agent to visit the web pages and save the "
             "content to files. Make sure to check the files using the "
             "list_files tool. Note that arXiv offers a HTML version of "
-            "papers that should be used. "
+            "papers; this is preferable to the PDF version. "
             "They are accessible at https://arxiv.org/html/<arxiv_id>. "
-            "The web_page_agent cannot understand PDFs."
             " 3. If there is insufficient information, repeat steps 1 and 2.\n"
             " 4. Plan the structure of the report and the content of each "
             "section.\n"
@@ -52,6 +51,10 @@ DEFAULTS = {
             " 8. Use the create_latex_document tool to combine all the "
             "sections into a complete LaTeX document using either the article "
             "or beamer template, depending on the task.\n"
+            " 9. Use the compile_latex_document tool to compile the LaTeX "
+            "document into a PDF.\n"
+            "Ensure that you finish all of the above steps before "
+            "returning the final answer.\n"
         ),
     },
     "web_search": {
@@ -77,6 +80,9 @@ DEFAULTS = {
             "to fully cite the webpage, including the URL, author, and "
             "date of publication, when available.\n"
             "Include the filename in your response.\n"
+            "Use the extract_pdf_text if the webpage is a PDF.\n"
+            "If you encounter an error, report it to your manager "
+            "and ask for help. Do not attempt to fix the error yourself.\n"
         ),
     },
     "writing": {
@@ -88,7 +94,9 @@ DEFAULTS = {
             "When writing content, follow these guidelines:\n"
             "- Use clear, concise language appropriate for the requested "
             "content type\n"
-            "- Properly attribute any sources used in your writing\n"
+            "- Properly attribute any sources used in your writing. "
+            "If you are writing a LaTeX document, use the \\cite{} command "
+            "to cite sources.\n"
             "- Format content appropriately based on the file type and "
             "purpose\n"
             "- For markdown files, use proper markdown syntax for headings, "

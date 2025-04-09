@@ -16,10 +16,10 @@
 \setbeamertemplate{footline}[page number]
 
 % Document information
-\title{{{ title|default("Presentation Title") }}}
-\author{{{ author|default("Presenter Name") }}}
-\institute{{{ institute|default("Institute Name") }}}
-\date{{{ date|default("\\today") }}}
+\title{ {{ title|default("Presentation Title") }} }
+\author{ {{ author|default("Presenter Name") }} }
+\institute{ {{ institute|default("Institute Name") }} }
+\date{ {{ date|default("\\today") }} }
 
 \begin{document}
 
@@ -32,7 +32,7 @@
 \end{frame}
 
 {% for section in sections %}
-\input{{{ section }}}
+\input{ {{ section }} }
 {% endfor %}
 
 \begin{frame}{References}
