@@ -2,10 +2,67 @@
 
 import os
 import datetime
+import re
 from typing import List, Optional
 from smolagents import tool
 
 from .config import ConfigManager
+
+
+@tool
+def visit_webpage(url: str) -> str:
+    """
+    Visits a webpage at the given url and reads its content as a markdown string.
+    Uses a custom user agent to avoid being blocked.
+    
+    Args:
+        url: The url of the webpage to visit.
+    
+    Returns:
+        The webpage content as markdown.
+    """
+    try:
+        import requests
+        from markdownify import markdownify
+        from requests.exceptions import RequestException
+    except ImportError as e:
+        return (
+            "You must install packages `markdownify` and `requests` to run this tool: "
+            f"for instance run `pip install markdownify requests`. Error: {e}"
+        )
+    
+    # Define headers with a user agent to avoid being blocked
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0"
+    }
+    
+    try:
+        # Send a GET request to the URL with headers and a 20-second timeout
+        response = requests.get(url, headers=headers, timeout=20)
+        response.raise_for_status()  # Raise an exception for bad status codes
+
+        # Convert the HTML content to Markdown
+        markdown_content = markdownify(response.text).strip()
+
+        # Remove multiple line breaks
+        markdown_content = re.sub(r"\n{3,}", "\n\n", markdown_content)
+        
+        # Add source URL at the beginning
+        markdown_content = f"Source: {url}\n\n{markdown_content}"
+        
+        # Truncate content if it's too long (40,000 characters as in reference implementation)
+        max_output_length = 40000
+        if len(markdown_content) > max_output_length:
+            markdown_content = markdown_content[:max_output_length] + "\n\n[Content truncated due to length...]"
+
+        return markdown_content
+
+    except requests.exceptions.Timeout:
+        return "The request timed out. Please try again later or check the URL."
+    except RequestException as e:
+        return f"Error fetching the webpage: {str(e)}"
+    except Exception as e:
+        return f"An unexpected error occurred: {str(e)}"
 
 
 @tool

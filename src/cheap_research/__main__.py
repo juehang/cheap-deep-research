@@ -3,11 +3,13 @@ from smolagents import (
     ToolCallingAgent,
     DuckDuckGoSearchTool,
     LiteLLMModel,
-    VisitWebpageTool,
 )
 
 from .config import ConfigManager
-from .tools import create_file, list_files, read_file, list_latex_templates, create_latex_document
+from .tools import (
+    create_file, list_files, read_file, list_latex_templates, 
+    create_latex_document, visit_webpage
+)
 
 def main():
     """
@@ -53,9 +55,9 @@ def main():
             ),
     )
     
-    # Add file saving capability to web page agent
+    # Add file saving capability to web page agent with our custom webpage tool
     web_page_agent = ToolCallingAgent(
-        tools=[VisitWebpageTool(), create_file],
+        tools=[visit_webpage, create_file],
         model=web_page_model,
         max_steps=10,
         name="web_page_agent",
@@ -97,11 +99,13 @@ def main():
     
     # Add LaTeX tools and file management tools to the orchestrator
     manager_agent = CodeAgent(
-        tools=[list_files, list_latex_templates, create_latex_document],
+        tools=[
+            list_files, list_latex_templates, read_file, create_latex_document
+            ],
         model=orchestrator_model,
         managed_agents=[web_search_agent, web_page_agent, writing_agent],
         additional_authorized_imports=[
-            "time", "numpy", "pandas", "matplotlib"
+            "time", "numpy", "pandas", "matplotlib",
         ],
     )
 

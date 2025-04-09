@@ -20,16 +20,24 @@ Cheap Research is an AI-powered research assistant that helps you gather and ana
   - List available files and directories for easy navigation
   - Security features prevent directory traversal and ensure safe file operations
 
+- **LaTeX document generation**:
+  - Built-in LaTeX templates for articles and presentations
+  - Combine section files into complete LaTeX documents
+  - Support for customizing title, author, date, and other parameters
+  - Templates stored in user configuration directory for easy customization
+
 - **Research workflow**:
   1. Search for information on a topic
   2. Visit and save relevant webpages
   3. Read and analyze saved content
-  4. Create reports and summaries based on research
+  4. Write sections for a LaTeX document
+  5. Generate a complete LaTeX document from your sections
 
 ## Installation
 
 ### Requirements
 - Python 3.11 or higher
+- Required packages: smolagents, jinja2, and more (see pyproject.toml)
 
 ### Install from source
 ```bash
@@ -68,6 +76,27 @@ Edit the configuration file to add your API keys and customize the behavior of t
 - **List files**: "Show me what files are in the saved_pages directory"
 - **Read file**: "Read the content of saved_pages/quantum.md"
 - **Create content**: "Create a summary of the quantum computing research I've saved"
+- **List LaTeX templates**: "What LaTeX templates are available?"
+- **Create LaTeX document**: "Create a LaTeX article with introduction.tex and methods.tex as sections"
+
+### LaTeX Template System
+
+The research assistant includes a LaTeX template system that can combine section files into complete documents:
+
+1. **Available Templates**:
+   - `article`: Standard article format with academic styling
+   - `beamer`: Presentation slides with the Madrid theme
+
+2. **Creating LaTeX Documents**:
+   - Write individual section files using the writing agent
+   - Each section file should include its own `\section{}` commands
+   - Use the `create_latex_document` tool to combine sections into a complete document
+   - Generated documents are saved to the `latex_docs` directory
+
+3. **Template Customization**:
+   - Templates are stored in your user config directory
+   - You can edit these templates to customize the styling or structure
+   - Templates use Jinja2 syntax for variable substitution and loops
 
 ## License
 
