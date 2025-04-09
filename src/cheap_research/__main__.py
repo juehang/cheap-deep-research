@@ -7,7 +7,7 @@ from smolagents import (
 )
 
 from .config import ConfigManager
-from .tools import create_file, list_files, read_file
+from .tools import create_file, list_files, read_file, list_latex_templates, create_latex_document
 
 def main():
     """
@@ -95,12 +95,14 @@ def main():
         + config_manager.config["writing"]["additional_system_prompt"]
     )
     
-    # Add list_files tool to the orchestrator agent and connect all managed agents
+    # Add LaTeX tools and file management tools to the orchestrator
     manager_agent = CodeAgent(
-        tools=[list_files],  # Add list_files tool to orchestrator
+        tools=[list_files, list_latex_templates, create_latex_document],
         model=orchestrator_model,
         managed_agents=[web_search_agent, web_page_agent, writing_agent],
-        additional_authorized_imports=["time", "numpy", "pandas", "matplotlib"],
+        additional_authorized_imports=[
+            "time", "numpy", "pandas", "matplotlib"
+        ],
     )
 
     manager_agent.prompt_templates["system_prompt"] = (
@@ -109,17 +111,26 @@ def main():
         + config_manager.config["orchestrator"]["additional_system_prompt"]
     )
     
-    # Ensure the default save directory exists
+    # Ensure the default directories exist
     import os
+    
+    # Default save directory for web page content
     default_save_dir = config_manager.config["file_saving"]["default_directory"]
     if not os.path.exists(default_save_dir):
         os.makedirs(default_save_dir, exist_ok=True)
         print(f"Created default save directory: {default_save_dir}")
     
+    # LaTeX output directory
+    latex_output_dir = config_manager.config["latex"]["output_directory"]
+    if not os.path.exists(latex_output_dir):
+        os.makedirs(latex_output_dir, exist_ok=True)
+        print(f"Created LaTeX output directory: {latex_output_dir}")
+    
     # Welcome message
     print("Research assistant is ready. Type 'exit' to quit.")
     print(f"Webpage content can be saved to files in the '{default_save_dir}' directory.")
-    print("The system includes a specialized writing agent that can help create and manage content.")
+    print(f"LaTeX documents will be generated in the '{latex_output_dir}' directory.")
+    print("Available LaTeX templates: " + ", ".join(config_manager.config["latex"]["available_templates"]))
     
     # Simple interactive loop
     while True:
@@ -135,7 +146,7 @@ def main():
             
             # Process the user input with the manager agent
             print("\nProcessing your request...")
-            response = manager_agent.run(user_input)
+            response = manager_agent.run(user_input, reset=False)
             
             # Display the response
             print("\n--- Research Results ---")

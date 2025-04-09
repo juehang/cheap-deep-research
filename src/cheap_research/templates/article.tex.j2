@@ -1,0 +1,35 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+
+% Document settings
+\title{{{ title|default("Document Title") }}}
+\author{{{ author|default("Author Name") }}}
+\date{{{ date|default("\\today") }}}
+
+\begin{document}
+
+\maketitle
+
+{% if abstract %}
+\begin{abstract}
+\input{{{ abstract }}}
+\end{abstract}
+{% endif %}
+
+{% for section in sections %}
+\input{{{ section }}}
+{% endfor %}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

@@ -2,7 +2,10 @@
 
 import os
 import datetime
+from typing import List, Optional
 from smolagents import tool
+
+from .config import ConfigManager
 
 
 @tool
@@ -203,3 +206,163 @@ def list_files(directory: str = "") -> str:
     
     except Exception as e:
         return f"Error listing files: {str(e)}"
+
+
+@tool
+def list_latex_templates() -> str:
+    """
+    Lists all available LaTeX templates in the config directory.
+    
+    Returns:
+        A formatted list of available LaTeX templates.
+    """
+    config_manager = ConfigManager()
+    templates = config_manager.config["latex"]["available_templates"]
+    templates_dir = config_manager.config["latex"]["templates_directory"]
+    
+    if not templates:
+        return "No LaTeX templates available."
+    
+    result = ["Available LaTeX templates:"]
+    
+    for template in sorted(templates):
+        template_path = os.path.join(templates_dir, f"{template}.tex.j2")
+        if os.path.exists(template_path):
+            result.append(f"  📄 {template} - Available")
+        else:
+            result.append(f"  ❌ {template} - Missing")
+    
+    result.append("\nUse create_latex_document to create a document using one of these templates.")
+    
+    return "\n".join(result)
+
+
+@tool
+def create_latex_document(
+    template_type: str,
+    output_filename: str,
+    section_files: List[str],
+    title: Optional[str] = None,
+    author: Optional[str] = None,
+    date: Optional[str] = None,
+    abstract: Optional[str] = None,
+    institute: Optional[str] = None
+) -> str:
+    """
+    Creates a LaTeX document using a Jinja2 template and includes sections using \input statements.
+    
+    Args:
+        template_type: The type of template to use (e.g., "article", "beamer").
+        output_filename: The name of the output LaTeX file.
+        section_files: List of section files to include in the document.
+        title: Optional custom title for the document.
+        author: Optional custom author for the document.
+        date: Optional custom date for the document.
+        abstract: Optional abstract file to include (for article template).
+        institute: Optional institute name (for beamer template).
+        
+    Returns:
+        A message indicating the result of the operation.
+    """
+    try:
+        from jinja2 import Environment, FileSystemLoader
+    except ImportError:
+        return "Error: Jinja2 is not installed. Please install it with 'pip install jinja2'."
+    
+    # Get current working directory as absolute path
+    cwd = os.path.abspath(os.getcwd())
+    
+    # Initialize config manager to get template info
+    config_manager = ConfigManager()
+    templates_dir = config_manager.config["latex"]["templates_directory"]
+    available_templates = config_manager.config["latex"]["available_templates"]
+    latex_output_dir = config_manager.config["latex"]["output_directory"]
+    
+    # Validate template_type
+    if template_type not in available_templates:
+        templates_list = ", ".join(available_templates)
+        return f"Error: Invalid template type '{template_type}'. Available templates: {templates_list}"
+    
+    # Set up Jinja2 environment
+    env = Environment(
+        loader=FileSystemLoader(templates_dir),
+        autoescape=False,  # Don't escape LaTeX syntax
+        trim_blocks=True,
+        lstrip_blocks=True
+    )
+    
+    try:
+        # Load the template
+        template = env.get_template(f"{template_type}.tex.j2")
+        
+        # Validate section files
+        valid_section_files = []
+        missing_section_files = []
+        
+        for section_file in section_files:
+            section_path = os.path.join(cwd, section_file)
+            if os.path.exists(section_path) and os.path.isfile(section_path):
+                # Use relative paths for \input statements
+                rel_section_path = os.path.relpath(section_path, os.path.dirname(os.path.join(cwd, latex_output_dir, output_filename)))
+                # Replace backslashes with forward slashes for LaTeX
+                rel_section_path = rel_section_path.replace('\\', '/')
+                valid_section_files.append(rel_section_path)
+            else:
+                missing_section_files.append(section_file)
+        
+        if missing_section_files:
+            missing_list = ", ".join(missing_section_files)
+            return f"Error: The following section files do not exist: {missing_list}"
+        
+        # Validate abstract file if provided
+        abstract_path = None
+        if abstract:
+            abs_abstract_path = os.path.join(cwd, abstract)
+            if os.path.exists(abs_abstract_path) and os.path.isfile(abs_abstract_path):
+                # Use relative path for \input statement
+                abstract_path = os.path.relpath(abs_abstract_path, os.path.dirname(os.path.join(cwd, latex_output_dir, output_filename)))
+                abstract_path = abstract_path.replace('\\', '/')
+            else:
+                return f"Error: Abstract file does not exist: {abstract}"
+                
+        # Create output directory if it doesn't exist
+        output_dir = os.path.join(cwd, latex_output_dir)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        
+        # Ensure filename has .tex extension
+        if not output_filename.endswith('.tex'):
+            output_filename += '.tex'
+        output_path = os.path.join(output_dir, output_filename)
+        
+        # Render the template with data
+        template_data = {
+            "title": title,
+            "author": author,
+            "date": date,
+            "sections": valid_section_files
+        }
+        
+        # Add template-specific variables
+        if template_type == "article" and abstract_path:
+            template_data["abstract"] = abstract_path
+        elif template_type == "beamer" and institute:
+            template_data["institute"] = institute
+            
+        rendered_template = template.render(**template_data)
+        
+        # Write the rendered template to the output file
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(rendered_template)
+        
+        # Return success message
+        rel_output_path = os.path.relpath(output_path, cwd)
+        return (
+            f"LaTeX document successfully created at: {rel_output_path}\n"
+            f"Template used: {template_type}\n"
+            f"Section files included: {len(valid_section_files)}\n"
+            f"You can now compile this LaTeX document to generate the final output."
+        )
+        
+    except Exception as e:
+        return f"Error creating LaTeX document: {str(e)}"

@@ -1,0 +1,43 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+% Theme settings
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[page number]
+
+% Document information
+\title{{{ title|default("Presentation Title") }}}
+\author{{{ author|default("Presenter Name") }}}
+\institute{{{ institute|default("Institute Name") }}}
+\date{{{ date|default("\\today") }}}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}{Outline}
+\tableofcontents
+\end{frame}
+
+{% for section in sections %}
+\input{{{ section }}}
+{% endfor %}
+
+\begin{frame}{References}
+\bibliographystyle{plain}
+\bibliography{references}
+\end{frame}
+
+\end{document}

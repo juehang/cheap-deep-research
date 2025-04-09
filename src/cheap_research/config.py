@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import tomli
 import tomli_w
@@ -7,6 +8,7 @@ from xdg_base_dirs import xdg_config_home
 # Updated path to use underscore instead of hyphen for consistency
 config_dir = os.path.join(xdg_config_home(), "cheap_research")
 config_file = os.path.join(config_dir, "config.toml")
+templates_dir = os.path.join(config_dir, "templates")
 
 DEFAULTS = {
     "initialized": False,
@@ -29,16 +31,22 @@ DEFAULTS = {
             " 1. Gather relevant information. Prefer academic sources.\n"
             " 2. Use the web_page_agent to visit the web pages and save the "
             "content to files. Make sure to check the files using the "
-            "list_files tool.\n"
+            "list_files tool. Note that arXiv offers a HTML version of "
+            "papers that should be preferred over PDFs. "
+            "They are accessible at https://arxiv.org/html/<arxiv_id>.\n"
             " 3. If there is insufficient information, repeat steps 1 and 2.\n"
             " 4. Plan the structure of the report and the content of each "
             "section.\n"
             " 5. Use the writing_agent to create a .bib file with all the "
             "citations.\n"
-            " 6. Use the writing_agent to write each section or slide "
-            "in a separate tex file. "
-            "Make sure to check the files using the list_files tool.\n"
-            " 7. Combine all the sections into a single tex file."
+            " 6. Make figures using matplotlib as appropriate.\n"
+            " 7. Use the writing_agent to write each section or slide "
+            "in separate tex files with appropriate \\section{} commands. "
+            "Make sure to check the files using the list_files tool. "
+            "You are better at making diagrams than the writing_agent, "
+            "so if you expect a TikZ diagram, include it in the prompt.\n"
+            " 8. Use the latex_document_tool to combine all the sections into "
+            "a complete LaTeX document using either the article or beamer template.\n"
         ),
     },
     "web_search": {
@@ -82,9 +90,11 @@ DEFAULTS = {
             "lists, etc.\n"
             "- Always save files with appropriate extensions "
             "(.md, .tex, .bib, etc.)\n"
-            "- Note that you will be asked to write partial LaTeX documents, "
-            "so do not include the \\documentclass or \\begin{document} "
-            "commands in your responses Unless requested to do so.\n"
+            "- For LaTeX files, be sure to include the appropriate \\section{} "
+            "commands in each file if the content is for a document, or the"
+            " appropriate \\begin{frame} and \\end{frame} commands if the "
+            "content is for a presentation.\n"
+            "Include the filename in your response.\n"
         ),
     },
     "file_saving": {
@@ -95,6 +105,12 @@ DEFAULTS = {
         "enabled": True,
         "show_file_sizes": True,
         "show_modification_times": True
+    },
+    "latex": {
+        "templates_directory": templates_dir,
+        "available_templates": ["article", "beamer"],
+        "default_template": "article",
+        "output_directory": "latex_docs"  # Relative to working directory
     }
 }
 
@@ -114,6 +130,9 @@ class ConfigManager:
 
         # Ensure all default values are present
         self.ensure_defaults()
+        
+        # Ensure LaTeX templates exist in config directory
+        self.ensure_latex_templates()
 
     def reload(self):
         with open(config_file, "rb") as f:
@@ -155,3 +174,27 @@ class ConfigManager:
         if changed:
             self.save()
             print("Configuration file updated with new default values")
+    
+    def ensure_latex_templates(self):
+        """
+        Ensure that LaTeX templates exist in the config directory.
+        If they don't exist, copy them from the package templates directory.
+        """
+        # Create templates directory in config directory if it doesn't exist
+        if not os.path.exists(templates_dir):
+            os.makedirs(templates_dir, exist_ok=True)
+            
+        # Get the package templates directory path
+        package_templates_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "templates"
+        )
+        
+        # Copy templates if they don't exist in config directory
+        for template_name in self.config["latex"]["available_templates"]:
+            template_file = f"{template_name}.tex.j2"
+            config_template_path = os.path.join(templates_dir, template_file)
+            package_template_path = os.path.join(package_templates_dir, template_file)
+            
+            if not os.path.exists(config_template_path) and os.path.exists(package_template_path):
+                shutil.copy2(package_template_path, config_template_path)
+                print(f"Copied LaTeX template {template_file} to config directory")
