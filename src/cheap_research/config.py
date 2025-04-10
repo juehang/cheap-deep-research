@@ -20,6 +20,13 @@ DEFAULTS = {
             "research assistant agents with specialized tools to gather and "
             "analyze information on a given topic. Your goal is to produce a "
             "comprehensive and well-researched report on the topic.\n"
+            "Your report should include diagrams, tables, and other visual "
+            "elements when appropriate.\n"
+            "There should be on average at least one diagram or table per "
+            "section unless you have a good reason not to include one.\n"
+            "Note that your assistants have no memory of previous "
+            "interactions, so you will need to ensure that they have all the "
+            "information they need to complete their tasks.\n"
             "You will ensure that all information is appropriately cited and "
             "that the report is well-structured and easy to read.\n"
             "All citations must be verified by your research assistants."
@@ -34,12 +41,15 @@ DEFAULTS = {
             "list_files tool. Note that arXiv offers a HTML version of "
             "papers; this is preferable to the PDF version. "
             "They are accessible at https://arxiv.org/html/<arxiv_id>. "
-            " 3. If there is insufficient information, repeat steps 1 and 2.\n"
-            " 4. Plan the structure of the report and the content of each "
+            " 3. Use the writing_agent to create a references.bib file with "
+            " citations if it does not already exist, and add any new "
+            "citations to it.\n"
+            " 4. If there is insufficient information, repeat steps 1, 2, and 3.\n"
+            " 5. Plan the structure of the report and the content of each "
             "section.\n"
-            " 5. Use the writing_agent to create a references.bib file with "
-            " citations.\n"
-            " 6. Make figures using matplotlib as appropriate.\n"
+            " 6. Make figures using the plotting_agent as appropriate. "
+            "You can also use TikZ to make diagrams by simply passing the "
+            "TikZ code to the writing agent.\n"
             " 7. Use the writing_agent to write each section or slide "
             "in separate tex files with appropriate \\section{} commands. "
             "Make sure to check the files using the list_files tool. "
@@ -47,18 +57,39 @@ DEFAULTS = {
             "so if you expect a TikZ diagram, include it in the prompt. "
             "Remind the writing_agent to use \\cite{} commands to cite "
             "references and to check references.bib for the correct citation "
-            "keys. "
-            " 8. Use the create_latex_document tool to combine all the "
+            "keys. Also remind the writing_agent that it should not use "
+            "the \\begin{document} and \\end{document} commands when writing "
+            "sections. IMPORTANT: You must remind the writing agent to "
+            "only use citation keys that are in the references.bib file, and "
+            "to refer to the references.bib file, the other tex files, and "
+            "the information collected from the web search agent."
+            " 8. Remind the writing agent to verify that all citation keys "
+            "are from the references.bib file. If additional citations are "
+            "needed, repeat steps 1 and 2.\n"
+            " 9. Use the create_latex_document tool to combine all the "
             "sections into a complete LaTeX document using either the article "
             "or beamer template, depending on the task.\n"
-            " 9. Use the compile_latex_document tool to compile the LaTeX "
+            " 10. Use the compile_latex_document tool to compile the LaTeX "
             "document into a PDF.\n"
             "Ensure that you finish all of the above steps before "
             "returning the final answer.\n"
         ),
+        "reminders": (
+            "REMINDER: The references.bib file must be created before "
+            "writing the sections.\n"
+            "REMINDER: Remind the writing_agent to only use citation keys "
+            "that are in references.bib.\n"
+            "REMINDER: Remind the writing_agent to read references.bib, "
+            "the other tex files, and the information collected from the "
+            "web search agent.\n"
+            "REMINDER: Remind the writing_agent to verify that all citation "
+            "keys are from references.bib before combining the sections.\n"
+            "REMINDER: Use plots, diagrams, and tables to make the document "
+            "more engaging.\n"
+        ),
     },
     "web_search": {
-        "model": "openrouter/mistralai/mistral-small-24b-instruct-2501",
+        "model": "openrouter/mistralai/mistral-small-3.1-24b-instruct",
         "api_key": "",
         "additional_system_prompt": (
             "Respond in a very concise manner. Ensure that your responses are "
@@ -67,26 +98,40 @@ DEFAULTS = {
         ),
     },
     "web_page": {
-        "model": "openrouter/mistralai/mistral-small-24b-instruct-2501",
+        "model": "openrouter/mistralai/mistral-small-3.1-24b-instruct",
         "api_key": "",
         "additional_system_prompt": (
             "Respond in a very concise manner. Ensure that your responses are "
             "as short as possible while retaining all necessary information.\n"
+            "Make sure you do not include unnecessary formatting carried over "
+            "from the webpage. This cannot be done by coding, so you must "
+            "manually remove it and otherwise clean up the text.\n"
+            "This means that you should not directly save the webpage content "
+            "to a file without first cleaning it up!\n"
             "Use the create_file tool "
             "to save the page content to a file in the specified location. "
-            "Default to markdown files for webpage content and "
-            "choose descriptive filenames based on the page title or URL. "
-            "Within the file, make sure to include sufficient information "
-            "to fully cite the webpage, including the URL, author, and "
-            "date of publication, when available.\n"
+            "Use markdown files for webpage content and "
+            "choose a short filename based on the page title.\n"
+            "Do not pass a variable from another tool directly to the "
+            "create_file tool. Instead, this tool should be called with "
+            "your own writing, which should be the cleaned up content "
+            "of the webpage that you have visited.\n"
             "Include the filename in your response.\n"
             "Use the extract_pdf_text if the webpage is a PDF.\n"
             "If you encounter an error, report it to your manager "
             "and ask for help. Do not attempt to fix the error yourself.\n"
+            "Do NOT use coding to clean up content. Write it yourself. "
+            "Do NOT use strip to clean up content. Write it yourself. "
+            "As you are very hardworking, you should be able to write long "
+            "documents without making mistakes.\n"
+            "IMPORTANT: Within the file, make sure to include sufficient "
+            "information to fully cite the webpage, including the URL, "
+            "author, DOI, title, and date of publication, when available.\n"
+
         ),
     },
     "writing": {
-        "model": "openrouter/mistralai/mistral-small-24b-instruct-2501",
+        "model": "openrouter/anthropic/claude-3.5-haiku",
         "api_key": "",
         "additional_system_prompt": (
             "As a specialized writing assistant, you can read files, list "
@@ -96,23 +141,49 @@ DEFAULTS = {
             "content type\n"
             "- Properly attribute any sources used in your writing. "
             "If you are writing a LaTeX document, use the \\cite{} command "
-            "to cite sources.\n"
-            "- Format content appropriately based on the file type and "
-            "purpose\n"
-            "- For markdown files, use proper markdown syntax for headings, "
-            "lists, etc.\n"
-            "- Always save files with appropriate extensions "
-            "(.md, .tex, .bib, etc.)\n"
+            "to cite sources, as there will be a separate .bib file for "
+            "references. Read the references.bib file to ensure that you"
+            " know which references are available. If you need a new reference,"
+            " ask your manager to add it to the references.bib file.\n"
             "- For LaTeX files, be sure to include the appropriate \\section{} "
             "commands in each file if the content is for a document, or the"
             " appropriate \\begin{frame} and \\end{frame} commands if the "
             "content is for a presentation.\n"
+            "- When writing a LaTeX document, do not split content into "
+            "too many small subsections. Instead, organize the content "
+            "as peer-reviewed articles do.\n"
+            "- Format content appropriately based on the file type and "
+            "purpose.\n"
+            "- For markdown files, use proper markdown syntax for headings, "
+            "lists, etc.\n"
+            "- Always save files with appropriate extensions "
+            "(.md, .tex, .bib, etc.)\n"
+            "- Include the filename in your response.\n"
+            "- Unless requested, do not include the whole file content in "
+            "your response; instead, provide a brief summary of the content.\n"
+            "- Minimize use of lists or numbered lists. "
+            "Instead, write the content in a coherent paragraph.\n"
+            "- IMPORTANT: Make sure to review other files in the directory "
+            "to ensure consistency and coherence. This includes both other "
+            "LaTeX files and files that contain paper summaries."
+            "- Use tables to organize data when appropriate.\n"
+        ),
+    },
+    "plotting": {
+        "model": "openrouter/anthropic/claude-3.5-haiku",
+        "api_key": "",
+        "additional_system_prompt": (
+            "You are skilled at data visualization and can create "
+            "matplotlib code to generate plots.\n"
+            "Make sure to save the plot either as a .png or a .pdf "
+            "file.\n"
             "Include the filename in your response.\n"
+            "If you are unable to make your code work, try asking "
+            "your manager for help.\n"
         ),
     },
     "file_saving": {
         "enabled": True,
-        "default_directory": "saved_pages"  # Relative to working directory
     },
     "file_listing": {
         "enabled": True,
@@ -123,7 +194,6 @@ DEFAULTS = {
         "templates_directory": templates_dir,
         "available_templates": ["article", "beamer"],
         "default_template": "article",
-        "output_directory": "latex_docs"  # Relative to working directory
     }
 }
 

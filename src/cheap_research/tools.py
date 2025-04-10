@@ -109,12 +109,12 @@ def extract_pdf_text(url: str) -> str:
         # Process the PDF content directly
         pdf_document = pymupdf.Document(stream=response.content)
         markdown_content = pymupdf4llm.to_markdown(pdf_document)
-        markdown_content = markdown_content.encode("ascii", "xmlcharrefreplace")
+        markdown_content = markdown_content.encode("ascii", "replace").decode("utf-8")
         max_output_length = 100000
         if len(markdown_content) > max_output_length:
             markdown_content = markdown_content[:max_output_length] + "\n\n[Content truncated due to length...]"
-        
-        
+
+
         return f"PDF Source: {url}\n\n" + markdown_content
     except requests.exceptions.RequestException as e:
         return f"Error fetching PDF: {str(e)}"
@@ -222,8 +222,11 @@ def create_file(content: str, filename: str) -> str:
 @tool
 def read_file(filename: str, encoding: str = "utf-8") -> str:
     """
-    Reads the content of a file within the current working directory or its subdirectories.
-    
+    Reads the content of a file within the current working directory or its
+    subdirectories. To avoid using too many tokens, do not print
+    the full content of the file unless you have a good reason to do so.
+    Instead, print a portion of the content.
+
     Args:
         filename: The name of the file to read (can include subdirectories).
                   Example: "saved_pages/article.md" or "notes.txt"
@@ -424,10 +427,17 @@ def create_latex_document(
         template_type: The type of template to use (e.g., "article", "beamer").
         output_filename: The name of the output LaTeX file.
         section_files: List of section files to include in the document.
+            These files should be .tex files containing the content of each section,
+            without the \\begin{document} and \\end{document} commands but 
+            with appropriate \\section{} commands. You can use the
+            writing_agent to generate these files, and to ensure they are
+            in the correct format.
         title: Optional custom title for the document.
         author: Optional custom author for the document.
         date: Optional custom date for the document.
         abstract: Optional abstract file to include (for article template).
+            The abstract file should be a .tex file containing the abstract content
+            without the \\begin{abstract} and \\end{abstract} commands.
         institute: Optional institute name (for beamer template).
         
     Returns:
@@ -445,7 +455,6 @@ def create_latex_document(
     config_manager = ConfigManager()
     templates_dir = config_manager.config["latex"]["templates_directory"]
     available_templates = config_manager.config["latex"]["available_templates"]
-    latex_output_dir = config_manager.config["latex"]["output_directory"]
     
     # Validate template_type
     if template_type not in available_templates:
@@ -472,7 +481,7 @@ def create_latex_document(
             section_path = os.path.join(cwd, section_file)
             if os.path.exists(section_path) and os.path.isfile(section_path):
                 # Use relative paths for \input statements
-                rel_section_path = os.path.relpath(section_path, os.path.dirname(os.path.join(cwd, latex_output_dir, output_filename)))
+                rel_section_path = os.path.relpath(section_path, os.path.dirname(os.path.join(cwd, output_filename)))
                 # Replace backslashes with forward slashes for LaTeX
                 rel_section_path = rel_section_path.replace('\\', '/')
                 valid_section_files.append(rel_section_path)
@@ -489,15 +498,12 @@ def create_latex_document(
             abs_abstract_path = os.path.join(cwd, abstract)
             if os.path.exists(abs_abstract_path) and os.path.isfile(abs_abstract_path):
                 # Use relative path for \input statement
-                abstract_path = os.path.relpath(abs_abstract_path, os.path.dirname(os.path.join(cwd, latex_output_dir, output_filename)))
+                abstract_path = os.path.relpath(abs_abstract_path, os.path.dirname(os.path.join(cwd, output_filename)))
                 abstract_path = abstract_path.replace('\\', '/')
             else:
                 return f"Error: Abstract file does not exist: {abstract}"
-                
-        # Create output directory if it doesn't exist
-        output_dir = os.path.join(cwd, latex_output_dir)
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
+
+        output_dir = cwd
         
         # Ensure filename has .tex extension
         if not output_filename.endswith('.tex'):
